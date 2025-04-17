@@ -4,9 +4,10 @@ import (
 	"context"
 	"log"
 
-	"github.com/Kroph/Programming/order-service/internal/domain"
-	"github.com/Kroph/Programming/order-service/internal/service"
 	pb "github.com/Kroph/Programming/proto/order"
+
+	"order-service/internal/domain"
+	"order-service/internal/service"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

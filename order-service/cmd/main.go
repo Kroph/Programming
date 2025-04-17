@@ -6,10 +6,11 @@ import (
 	"log"
 	"net"
 
-	"github.com/Kroph/Programming/order-service/config"
-	"github.com/Kroph/Programming/order-service/internal/handler"
-	"github.com/Kroph/Programming/order-service/internal/repository"
-	"github.com/Kroph/Programming/order-service/internal/service"
+	"order-service/config"
+	"order-service/internal/handler"
+	"order-service/internal/repository"
+	"order-service/internal/service"
+
 	pb "github.com/Kroph/Programming/proto/order"
 
 	_ "github.com/lib/pq"
