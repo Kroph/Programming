@@ -3,15 +3,18 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"inventory-service/internal/config"
-	"inventory-service/internal/handler"
-	"inventory-service/internal/repository"
-	"inventory-service/internal/service"
 	"log"
-	"os"
+	"net"
 
-	"github.com/gin-gonic/gin"
+	"github.com/Kroph/Programming/inventory-service/config"
+	"github.com/Kroph/Programming/inventory-service/internal/handler"
+	"github.com/Kroph/Programming/inventory-service/internal/repository"
+	"github.com/Kroph/Programming/inventory-service/internal/service"
+	pb "github.com/Kroph/Programming/proto/inventory"
+
 	_ "github.com/lib/pq"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -46,22 +49,27 @@ func main() {
 	productService := service.NewProductService(productRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 
-	// Initialize router
-	router := gin.Default()
-
-	// Register routes
-	api := router.Group("/api/v1")
-	handler.RegisterProductRoutes(api, productService)
-	handler.RegisterCategoryRoutes(api, categoryService)
-
-	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// Initialize gRPC server
+	lis, err := net.Listen("tcp", ":"+cfg.Server.GrpcPort)
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	log.Printf("Inventory Service starting on port %s", port)
-	if err := router.Run(":" + port); err != nil {
+	grpcServer := grpc.NewServer()
+
+	// Register product service handler
+	productHandler := handler.NewProductGrpcHandler(productService)
+	pb.RegisterProductServiceServer(grpcServer, productHandler)
+
+	// Register category service handler
+	categoryHandler := handler.NewCategoryGrpcHandler(categoryService)
+	pb.RegisterCategoryServiceServer(grpcServer, categoryHandler)
+
+	// Enable reflection for tools like grpcurl
+	reflection.Register(grpcServer)
+
+	log.Printf("Inventory Service gRPC server starting on port %s", cfg.Server.GrpcPort)
+	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

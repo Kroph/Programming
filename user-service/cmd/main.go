@@ -6,11 +6,11 @@ import (
 	"log"
 	"net"
 
-	"github.com/Kroph/Programming/order-service/config"
-	"github.com/Kroph/Programming/order-service/internal/handler"
-	"github.com/Kroph/Programming/order-service/internal/repository"
-	"github.com/Kroph/Programming/order-service/internal/service"
-	pb "github.com/Kroph/Programming/proto/order"
+	pb "github.com/Kroph/Programming/proto/user"
+	"github.com/Kroph/Programming/user-service/config"
+	"github.com/Kroph/Programming/user-service/internal/handler"
+	"github.com/Kroph/Programming/user-service/internal/repository"
+	"github.com/Kroph/Programming/user-service/internal/service"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -42,10 +42,10 @@ func main() {
 	}
 
 	// Initialize repositories
-	orderRepo := repository.NewPostgresOrderRepository(db)
+	userRepo := repository.NewPostgresUserRepository(db)
 
 	// Initialize services
-	orderService := service.NewOrderService(orderRepo)
+	userService := service.NewUserService(userRepo, cfg.Auth.Secret, cfg.Auth.ExpiryMinutes)
 
 	// Initialize gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.Server.GrpcPort)
@@ -55,18 +55,14 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 
-	// Register order service handler
-	orderHandler := handler.NewOrderGrpcHandler(orderService)
-	pb.RegisterOrderServiceServer(grpcServer, orderHandler)
-
-	// Register payment service handler
-	paymentHandler := handler.NewPaymentGrpcHandler()
-	pb.RegisterPaymentServiceServer(grpcServer, paymentHandler)
+	// Register user service handler
+	userHandler := handler.NewUserGrpcHandler(userService)
+	pb.RegisterUserServiceServer(grpcServer, userHandler)
 
 	// Enable reflection for tools like grpcurl
 	reflection.Register(grpcServer)
 
-	log.Printf("Order Service gRPC server starting on port %s", cfg.Server.GrpcPort)
+	log.Printf("User Service gRPC server starting on port %s", cfg.Server.GrpcPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

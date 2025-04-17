@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"inventory-service/internal/domain"
 	"time"
+
+	"github.com/Kroph/Programming/inventory-service/internal/domain"
 
 	"github.com/google/uuid"
 )

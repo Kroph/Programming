@@ -11,38 +11,48 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"api-gateway/config"
-	"api-gateway/handler"
-	"api-gateway/middleware"
-	"api-gateway/service"
+	"github.com/Kroph/Programming/api-gateway/config"
+	"github.com/Kroph/Programming/api-gateway/handler"
+	"github.com/Kroph/Programming/api-gateway/middleware"
+	"github.com/Kroph/Programming/api-gateway/service"
 )
 
 func main() {
 	cfg := config.LoadConfig()
 
+	// Initialize gRPC clients
+	grpcClients, err := service.NewGrpcClients(
+		cfg.Services.User.GrpcURL,
+		cfg.Services.Inventory.GrpcURL,
+		cfg.Services.Order.GrpcURL,
+	)
+	if err != nil {
+		log.Fatalf("Failed to initialize gRPC clients: %v", err)
+	}
+
+	// Initialize auth service
 	authService := service.NewAuthService(cfg.Auth.Secret, cfg.Auth.ExpiryMinutes)
 
+	// Initialize handler
+	h := handler.NewHandler(grpcClients, authService)
+
+	// Set up router with middleware
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.Logger())
 	router.Use(middleware.RequestID())
 	router.Use(middleware.Telemetry())
 
-	protectedRouter := router.Group("/api/v1")
-	protectedRouter.Use(middleware.Authentication(authService))
+	// Register routes
+	handler.RegisterRoutes(router, h)
 
-	inventoryService := service.NewProxyService(cfg.Services.Inventory.URL)
-	handler.RegisterProxyRoutes(protectedRouter, "/products", inventoryService)
-	handler.RegisterProxyRoutes(protectedRouter, "/categories", inventoryService)
-
-	orderService := service.NewProxyService(cfg.Services.Order.URL)
-	handler.RegisterProxyRoutes(protectedRouter, "/orders", orderService)
-
+	// Initialize HTTP server
 	server := &http.Server{
 		Addr:    ":" + cfg.Server.Port,
 		Handler: router,
 	}
 
+	// Start server in a goroutine
 	go func() {
 		log.Printf("API Gateway starting on port %s", cfg.Server.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -50,6 +60,7 @@ func main() {
 		}
 	}()
 
+	// Wait for interrupt signal to gracefully shut down the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

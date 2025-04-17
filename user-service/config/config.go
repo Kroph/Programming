@@ -9,19 +9,16 @@ import (
 )
 
 type Config struct {
-	Server struct {
-		Port string
+	DB struct {
+		Host     string
+		Port     string
+		User     string
+		Password string
+		Name     string
 	}
-	Services struct {
-		User struct {
-			GrpcURL string
-		}
-		Inventory struct {
-			GrpcURL string
-		}
-		Order struct {
-			GrpcURL string
-		}
+	Server struct {
+		Port     string
+		GrpcPort string
 	}
 	Auth struct {
 		Secret        string
@@ -36,13 +33,16 @@ func LoadConfig() *Config {
 
 	config := &Config{}
 
-	config.Server.Port = getEnv("GATEWAY_PORT", "8000")
+	config.DB.Host = getEnv("USER_DB_HOST", "localhost")
+	config.DB.Port = getEnv("USER_DB_PORT", "5432")
+	config.DB.User = getEnv("USER_DB_USER", "postgres")
+	config.DB.Password = getEnv("USER_DB_PASSWORD", "postgres")
+	config.DB.Name = getEnv("USER_DB_NAME", "users")
 
-	config.Services.User.GrpcURL = getEnv("USER_GRPC_URL", "localhost:50053")
-	config.Services.Inventory.GrpcURL = getEnv("INVENTORY_GRPC_URL", "localhost:50051")
-	config.Services.Order.GrpcURL = getEnv("ORDER_GRPC_URL", "localhost:50052")
+	config.Server.Port = getEnv("USER_HTTP_PORT", "8082")
+	config.Server.GrpcPort = getEnv("USER_GRPC_PORT", "50053")
 
-	config.Auth.Secret = getEnv("AUTH_SECRET", "your-default-secret-key-change-in-production")
+	config.Auth.Secret = getEnv("AUTH_SECRET", "your-secret-key-change-this-in-production")
 	expiryStr := getEnv("AUTH_EXPIRY_MINUTES", "60")
 	expiryMinutes, err := strconv.Atoi(expiryStr)
 	if err != nil {

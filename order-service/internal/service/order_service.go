@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"inventory-service/internal/domain"
-	"inventory-service/internal/repository"
+	"github.com/Kroph/Programming/inventory-service/internal/domain"
+	"github.com/Kroph/Programming/inventory-service/internal/repository"
 )
 
 type OrderService interface {
