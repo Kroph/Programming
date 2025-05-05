@@ -42,11 +42,18 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
+	// Initialize NATS service
+	natsService, err := service.NewNatsService(cfg.NATS.URL)
+	if err != nil {
+		log.Fatalf("Failed to initialize NATS service: %v", err)
+	}
+	defer natsService.Close()
+
 	// Initialize repositories
 	orderRepo := repository.NewPostgresOrderRepository(db)
 
 	// Initialize services
-	orderService := service.NewOrderService(orderRepo)
+	orderService := service.NewOrderService(orderRepo, natsService)
 
 	// Initialize gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.Server.GrpcPort)
