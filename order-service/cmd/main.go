@@ -8,12 +8,10 @@ import (
 
 	"order-service/config"
 	"order-service/internal/handler"
-	"order-service/internal/publisher"
 	"order-service/internal/repository"
 	"order-service/internal/service"
 
-	pb "github.com/Kroph/Programming/proto/order"
-	"github.com/Kroph/Programming/shared/pkg/nats"
+	pb "proto/order"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -44,21 +42,11 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
-	// Initialize NATS client
-	natsClient, err := nats.NewClient(cfg.NATS.URL)
-	if err != nil {
-		log.Fatalf("Failed to connect to NATS: %v", err)
-	}
-	defer natsClient.Close()
-
 	// Initialize repositories
 	orderRepo := repository.NewPostgresOrderRepository(db)
 
-	// Initialize publisher
-	orderPublisher := publisher.NewOrderPublisher(natsClient)
-
 	// Initialize services
-	orderService := service.NewOrderService(orderRepo, orderPublisher)
+	orderService := service.NewOrderService(orderRepo)
 
 	// Initialize gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.Server.GrpcPort)

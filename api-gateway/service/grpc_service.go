@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	inventorypb "github.com/Kroph/Programming/proto/inventory"
-	orderpb "github.com/Kroph/Programming/proto/order"
-	userpb "github.com/Kroph/Programming/proto/user"
+	inventorypb "proto/inventory"
+	orderpb "proto/order"
+	userpb "proto/user"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

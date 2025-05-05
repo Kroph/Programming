@@ -7,7 +7,7 @@ import (
 	"inventory-service/internal/domain"
 	"inventory-service/internal/service"
 
-	pb "github.com/Kroph/Programming/proto/inventory"
+	pb "proto/inventory"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

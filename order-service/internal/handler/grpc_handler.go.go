@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	pb "github.com/Kroph/Programming/proto/order"
+	pb "proto/order"
 
 	"order-service/internal/domain"
 	"order-service/internal/service"

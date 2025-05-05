@@ -6,8 +6,8 @@ import (
 
 	"api-gateway/service"
 
-	inventorypb "github.com/Kroph/Programming/proto/inventory"
-	orderpb "github.com/Kroph/Programming/proto/order"
+	inventorypb "proto/inventory"
+	orderpb "proto/order"
 
 	"github.com/gin-gonic/gin"
 )

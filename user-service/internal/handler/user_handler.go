@@ -4,10 +4,9 @@ import (
 	"context"
 	"log"
 
+	pb "proto/user"
 	"user-service/internal/domain"
 	"user-service/internal/service"
-
-	pb "github.com/Kroph/Programming/proto/user"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

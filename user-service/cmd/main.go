@@ -11,7 +11,7 @@ import (
 	"user-service/internal/repository"
 	"user-service/internal/service"
 
-	pb "github.com/Kroph/Programming/proto/user"
+	pb "proto/user"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
