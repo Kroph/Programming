@@ -24,6 +24,9 @@ type Config struct {
 			GrpcURL string
 		}
 	}
+	NATS struct {
+		URL string
+	}
 }
 
 func LoadConfig() *Config {
@@ -43,6 +46,7 @@ func LoadConfig() *Config {
 	config.Server.GrpcPort = getEnv("ORDERS_GRPC_PORT", "50052")
 
 	config.Services.Inventory.GrpcURL = getEnv("INVENTORY_GRPC_URL", "localhost:50051")
+	config.NATS.URL = getEnv("NATS_URL", "nats://localhost:4222")
 
 	return config
 }

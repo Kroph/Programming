@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Kroph/Programming/api-gateway/service"
+	"api-gateway/service"
+
 	inventorypb "github.com/Kroph/Programming/proto/inventory"
 	orderpb "github.com/Kroph/Programming/proto/order"
 

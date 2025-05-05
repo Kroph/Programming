@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Kroph/Programming/inventory-service/internal/domain"
+	"inventory-service/internal/domain"
 
 	"github.com/google/uuid"
 )

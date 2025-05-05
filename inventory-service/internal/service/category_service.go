@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/Kroph/Programming/inventory-service/internal/domain"
-	"github.com/Kroph/Programming/inventory-service/internal/repository"
+	"inventory-service/internal/domain"
+	"inventory-service/internal/repository"
 )
 
 type CategoryService interface {

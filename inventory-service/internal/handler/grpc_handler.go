@@ -4,8 +4,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/Kroph/Programming/inventory-service/internal/domain"
-	"github.com/Kroph/Programming/inventory-service/internal/service"
+	"inventory-service/internal/domain"
+	"inventory-service/internal/service"
+
 	pb "github.com/Kroph/Programming/proto/inventory"
 
 	"google.golang.org/grpc/codes"

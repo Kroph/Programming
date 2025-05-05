@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 
 	"order-service/internal/domain"
+	"order-service/internal/publisher"
 	"order-service/internal/repository"
 )
 
@@ -17,12 +19,14 @@ type OrderService interface {
 }
 
 type orderService struct {
-	orderRepo repository.OrderRepository
+	orderRepo      repository.OrderRepository
+	orderPublisher publisher.OrderPublisher
 }
 
-func NewOrderService(orderRepo repository.OrderRepository) OrderService {
+func NewOrderService(orderRepo repository.OrderRepository, orderPublisher publisher.OrderPublisher) OrderService {
 	return &orderService{
-		orderRepo: orderRepo,
+		orderRepo:      orderRepo,
+		orderPublisher: orderPublisher,
 	}
 }
 
@@ -46,9 +50,21 @@ func (s *orderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 	order.Total = total
 	order.Status = domain.OrderStatusPending
 
-	return s.orderRepo.Create(ctx, order)
+	createdOrder, err := s.orderRepo.Create(ctx, order)
+	if err != nil {
+		return domain.Order{}, err
+	}
+
+	// Publish order created event
+	if err := s.orderPublisher.PublishOrderCreated(createdOrder); err != nil {
+		// Log error but don't fail the order creation
+		log.Printf("Failed to publish order created event: %v", err)
+	}
+
+	return createdOrder, nil
 }
 
+// Rest of the methods remain the same
 func (s *orderService) GetOrderByID(ctx context.Context, id string) (domain.Order, error) {
 	return s.orderRepo.GetByID(ctx, id)
 }

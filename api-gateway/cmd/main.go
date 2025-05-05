@@ -11,10 +11,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Kroph/Programming/api-gateway/config"
-	"github.com/Kroph/Programming/api-gateway/handler"
-	"github.com/Kroph/Programming/api-gateway/middleware"
-	"github.com/Kroph/Programming/api-gateway/service"
+	"api-gateway/config"
+	"api-gateway/handler"
+	"api-gateway/middleware"
+	"api-gateway/service"
 )
 
 func main() {

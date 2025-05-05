@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/Kroph/Programming/user-service/internal/domain"
-	"github.com/Kroph/Programming/user-service/internal/repository"
+	"user-service/internal/domain"
+	"user-service/internal/repository"
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"

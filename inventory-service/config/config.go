@@ -19,6 +19,9 @@ type Config struct {
 		Port     string
 		GrpcPort string
 	}
+	NATS struct {
+		URL string
+	}
 }
 
 func LoadConfig() *Config {
@@ -36,6 +39,7 @@ func LoadConfig() *Config {
 
 	config.Server.Port = getEnv("INVENTORY_HTTP_PORT", "8080")
 	config.Server.GrpcPort = getEnv("INVENTORY_GRPC_PORT", "50051")
+	config.NATS.URL = getEnv("NATS_URL", "nats://localhost:4222")
 
 	return config
 }

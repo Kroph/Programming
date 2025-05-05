@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
-	"github.com/Kroph/Programming/user-service/internal/domain"
+	"user-service/internal/domain"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -172,13 +173,13 @@ func (r *PostgresUserRepository) List(ctx context.Context, filter domain.UserFil
 	var argIndex int = 1
 
 	if filter.Email != "" {
-		conditions += " AND email = $" + string(argIndex)
+		conditions += fmt.Sprintf(" AND email = $%d", argIndex)
 		args = append(args, filter.Email)
 		argIndex++
 	}
 
 	if filter.Username != "" {
-		conditions += " AND username = $" + string(argIndex)
+		conditions += fmt.Sprintf(" AND username = $%d", argIndex)
 		args = append(args, filter.Username)
 		argIndex++
 	}
@@ -194,7 +195,7 @@ func (r *PostgresUserRepository) List(ctx context.Context, filter domain.UserFil
 		offset = (filter.Page - 1) * limit
 	}
 
-	query := baseQuery + conditions + " LIMIT $" + string(argIndex) + " OFFSET $" + string(argIndex+1)
+	query := baseQuery + conditions + fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)

@@ -6,11 +6,12 @@ import (
 	"log"
 	"net"
 
+	"user-service/config"
+	"user-service/internal/handler"
+	"user-service/internal/repository"
+	"user-service/internal/service"
+
 	pb "github.com/Kroph/Programming/proto/user"
-	"github.com/Kroph/Programming/user-service/config"
-	"github.com/Kroph/Programming/user-service/internal/handler"
-	"github.com/Kroph/Programming/user-service/internal/repository"
-	"github.com/Kroph/Programming/user-service/internal/service"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"

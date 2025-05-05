@@ -1,15 +1,23 @@
+// inventory-service/cmd/main.go
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/Kroph/Programming/inventory-service/config"
-	"github.com/Kroph/Programming/inventory-service/internal/handler"
-	"github.com/Kroph/Programming/inventory-service/internal/repository"
-	"github.com/Kroph/Programming/inventory-service/internal/service"
+	"inventory-service/config"
+	"inventory-service/internal/consumer"
+	"inventory-service/internal/handler"
+	"inventory-service/internal/repository"
+	"inventory-service/internal/service"
+	"shared/pkg/nats"
+
 	pb "github.com/Kroph/Programming/proto/inventory"
 
 	_ "github.com/lib/pq"
@@ -49,6 +57,26 @@ func main() {
 	productService := service.NewProductService(productRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 
+	// Initialize NATS client
+	natsClient, err := nats.NewClient(cfg.NATS.URL)
+	if err != nil {
+		log.Fatalf("Failed to connect to NATS: %v", err)
+	}
+	defer natsClient.Close()
+
+	// Initialize consumer
+	orderConsumer := consumer.NewOrderConsumer(natsClient, productService)
+
+	// Start consumer in a goroutine
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		if err := orderConsumer.Start(ctx); err != nil {
+			log.Printf("Consumer error: %v", err)
+		}
+	}()
+
 	// Initialize gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.Server.GrpcPort)
 	if err != nil {
@@ -68,8 +96,19 @@ func main() {
 	// Enable reflection for tools like grpcurl
 	reflection.Register(grpcServer)
 
-	log.Printf("Inventory Service gRPC server starting on port %s", cfg.Server.GrpcPort)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+	// Start gRPC server in a goroutine
+	go func() {
+		log.Printf("Inventory Service gRPC server starting on port %s", cfg.Server.GrpcPort)
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down...")
+	cancel()
 }
