@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -18,6 +19,11 @@ type Config struct {
 	Server struct {
 		Port     string
 		GrpcPort string
+	}
+	Redis struct {
+		Addr     string
+		Password string
+		DB       int
 	}
 }
 
@@ -36,6 +42,16 @@ func LoadConfig() *Config {
 
 	config.Server.Port = getEnv("INVENTORY_HTTP_PORT", "8080")
 	config.Server.GrpcPort = getEnv("INVENTORY_GRPC_PORT", "50051")
+
+	// Redis configuration
+	config.Redis.Addr = getEnv("REDIS_ADDR", "localhost:6379")
+	config.Redis.Password = getEnv("REDIS_PASSWORD", "")
+
+	redisDB, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
+	if err != nil {
+		redisDB = 0
+	}
+	config.Redis.DB = redisDB
 
 	return config
 }

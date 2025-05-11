@@ -40,7 +40,7 @@ func main() {
 		log.Fatalf("Failed to start consuming: %v", err)
 	}
 
-	log.Println("Consumer service started. Press CTRL+C to exit.")
+	log.Println("Consumer service started.")
 
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)

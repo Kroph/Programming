@@ -3,8 +3,11 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"time"
 
+	"order-service/internal/cache"
 	"order-service/internal/domain"
 	"order-service/internal/repository"
 )
@@ -20,12 +23,14 @@ type OrderService interface {
 type orderService struct {
 	orderRepo   repository.OrderRepository
 	natsService NatsService
+	cache       cache.Cache
 }
 
-func NewOrderService(orderRepo repository.OrderRepository, natsService NatsService) OrderService {
+func NewOrderService(orderRepo repository.OrderRepository, natsService NatsService, cache cache.Cache) OrderService {
 	return &orderService{
 		orderRepo:   orderRepo,
 		natsService: natsService,
+		cache:       cache,
 	}
 }
 
@@ -64,7 +69,32 @@ func (s *orderService) CreateOrder(ctx context.Context, order domain.Order) (dom
 }
 
 func (s *orderService) GetOrderByID(ctx context.Context, id string) (domain.Order, error) {
-	return s.orderRepo.GetByID(ctx, id)
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("order:%s", id)
+	var cachedOrder domain.Order
+
+	err := s.cache.Get(ctx, cacheKey, &cachedOrder)
+	if err == nil {
+		log.Printf("Cache hit for order ID: %s", id)
+		return cachedOrder, nil
+	}
+
+	if err != cache.ErrCacheMiss {
+		log.Printf("Cache error for order ID %s: %v", id, err)
+	}
+
+	// If not in cache, get from database
+	order, err := s.orderRepo.GetByID(ctx, id)
+	if err != nil {
+		return domain.Order{}, err
+	}
+
+	// Store in cache with 10-minute TTL
+	if err := s.cache.Set(ctx, cacheKey, order, 10*time.Minute); err != nil {
+		log.Printf("Failed to cache order ID %s: %v", id, err)
+	}
+
+	return order, nil
 }
 
 func (s *orderService) UpdateOrderStatus(ctx context.Context, id string, status domain.OrderStatus) error {
@@ -78,14 +108,26 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, id string, status 
 	}
 
 	order.Status = status
-	return s.orderRepo.Update(ctx, order)
+	if err := s.orderRepo.Update(ctx, order); err != nil {
+		return err
+	}
+
+	// Invalidate cache
+	cacheKey := fmt.Sprintf("order:%s", id)
+	if err := s.cache.Delete(ctx, cacheKey); err != nil {
+		log.Printf("Failed to invalidate cache for order ID %s: %v", id, err)
+	}
+
+	return nil
 }
 
 func (s *orderService) ListOrders(ctx context.Context, filter domain.OrderFilter) ([]domain.Order, int, error) {
+	// Not caching list operations due to complexity of cache invalidation
 	return s.orderRepo.List(ctx, filter)
 }
 
 func (s *orderService) GetUserOrders(ctx context.Context, userID string) ([]domain.Order, error) {
+	// Not caching list operations due to complexity of cache invalidation
 	return s.orderRepo.GetUserOrders(ctx, userID)
 }
 

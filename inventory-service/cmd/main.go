@@ -7,11 +7,11 @@ import (
 	"net"
 
 	"inventory-service/config"
+	"inventory-service/internal/cache"
 	"inventory-service/internal/handler"
 	"inventory-service/internal/repository"
 	"inventory-service/internal/service"
-
-	pb "proto/inventory"
+	"proto/inventory"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -42,12 +42,19 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
+	// Initialize Redis cache
+	redisCache, err := cache.NewRedisCache(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	defer redisCache.Close()
+
 	// Initialize repositories
 	productRepo := repository.NewPostgresProductRepository(db)
 	categoryRepo := repository.NewPostgresCategoryRepository(db)
 
-	// Initialize services
-	productService := service.NewProductService(productRepo)
+	// Initialize services with cache
+	productService := service.NewProductService(productRepo, redisCache)
 	categoryService := service.NewCategoryService(categoryRepo)
 
 	// Initialize gRPC server
@@ -60,11 +67,11 @@ func main() {
 
 	// Register product service handler
 	productHandler := handler.NewProductGrpcHandler(productService)
-	pb.RegisterProductServiceServer(grpcServer, productHandler)
+	inventory.RegisterProductServiceServer(grpcServer, productHandler)
 
 	// Register category service handler
 	categoryHandler := handler.NewCategoryGrpcHandler(categoryService)
-	pb.RegisterCategoryServiceServer(grpcServer, categoryHandler)
+	inventory.RegisterCategoryServiceServer(grpcServer, categoryHandler)
 
 	// Enable reflection for tools like grpcurl
 	reflection.Register(grpcServer)

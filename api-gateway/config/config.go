@@ -27,6 +27,11 @@ type Config struct {
 		Secret        string
 		ExpiryMinutes int
 	}
+	Redis struct {
+		Addr     string
+		Password string
+		DB       int
+	}
 }
 
 func LoadConfig() *Config {
@@ -49,6 +54,16 @@ func LoadConfig() *Config {
 		expiryMinutes = 60
 	}
 	config.Auth.ExpiryMinutes = expiryMinutes
+
+	// Redis configuration
+	config.Redis.Addr = getEnv("REDIS_ADDR", "localhost:6379")
+	config.Redis.Password = getEnv("REDIS_PASSWORD", "")
+
+	redisDB, err := strconv.Atoi(getEnv("REDIS_DB", "3"))
+	if err != nil {
+		redisDB = 3
+	}
+	config.Redis.DB = redisDB
 
 	return config
 }

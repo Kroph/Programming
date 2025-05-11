@@ -7,11 +7,11 @@ import (
 	"net"
 
 	"order-service/config"
+	"order-service/internal/cache"
 	"order-service/internal/handler"
 	"order-service/internal/repository"
 	"order-service/internal/service"
-
-	pb "proto/order"
+	"proto/order"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -42,6 +42,13 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
+	// Initialize Redis cache
+	redisCache, err := cache.NewRedisCache(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	defer redisCache.Close()
+
 	// Initialize NATS service
 	natsService, err := service.NewNatsService(cfg.NATS.URL)
 	if err != nil {
@@ -52,8 +59,8 @@ func main() {
 	// Initialize repositories
 	orderRepo := repository.NewPostgresOrderRepository(db)
 
-	// Initialize services
-	orderService := service.NewOrderService(orderRepo, natsService)
+	// Initialize services with cache
+	orderService := service.NewOrderService(orderRepo, natsService, redisCache)
 
 	// Initialize gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.Server.GrpcPort)
@@ -65,11 +72,11 @@ func main() {
 
 	// Register order service handler
 	orderHandler := handler.NewOrderGrpcHandler(orderService)
-	pb.RegisterOrderServiceServer(grpcServer, orderHandler)
+	order.RegisterOrderServiceServer(grpcServer, orderHandler)
 
 	// Register payment service handler
 	paymentHandler := handler.NewPaymentGrpcHandler()
-	pb.RegisterPaymentServiceServer(grpcServer, paymentHandler)
+	order.RegisterPaymentServiceServer(grpcServer, paymentHandler)
 
 	// Enable reflection for tools like grpcurl
 	reflection.Register(grpcServer)

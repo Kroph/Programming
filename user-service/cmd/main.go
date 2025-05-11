@@ -6,12 +6,12 @@ import (
 	"log"
 	"net"
 
+	"proto/user"
 	"user-service/config"
+	"user-service/internal/cache"
 	"user-service/internal/handler"
 	"user-service/internal/repository"
 	"user-service/internal/service"
-
-	pb "proto/user"
 
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -42,11 +42,18 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
+	// Initialize Redis cache
+	redisCache, err := cache.NewRedisCache(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	defer redisCache.Close()
+
 	// Initialize repositories
 	userRepo := repository.NewPostgresUserRepository(db)
 
-	// Initialize services
-	userService := service.NewUserService(userRepo, cfg.Auth.Secret, cfg.Auth.ExpiryMinutes)
+	// Initialize services with cache
+	userService := service.NewUserService(userRepo, cfg.Auth.Secret, cfg.Auth.ExpiryMinutes, redisCache)
 
 	// Initialize gRPC server
 	lis, err := net.Listen("tcp", ":"+cfg.Server.GrpcPort)
@@ -58,7 +65,7 @@ func main() {
 
 	// Register user service handler
 	userHandler := handler.NewUserGrpcHandler(userService)
-	pb.RegisterUserServiceServer(grpcServer, userHandler)
+	user.RegisterUserServiceServer(grpcServer, userHandler)
 
 	// Enable reflection for tools like grpcurl
 	reflection.Register(grpcServer)

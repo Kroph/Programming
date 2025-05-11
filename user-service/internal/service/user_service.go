@@ -3,8 +3,11 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
+	"user-service/internal/cache"
 	"user-service/internal/domain"
 	"user-service/internal/repository"
 
@@ -23,6 +26,7 @@ type userService struct {
 	userRepo    repository.UserRepository
 	jwtSecret   string
 	jwtDuration time.Duration
+	cache       cache.Cache
 }
 
 type Claims struct {
@@ -30,11 +34,12 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func NewUserService(userRepo repository.UserRepository, jwtSecret string, jwtExpiryMinutes int) UserService {
+func NewUserService(userRepo repository.UserRepository, jwtSecret string, jwtExpiryMinutes int, cache cache.Cache) UserService {
 	return &userService{
 		userRepo:    userRepo,
 		jwtSecret:   jwtSecret,
 		jwtDuration: time.Duration(jwtExpiryMinutes) * time.Minute,
+		cache:       cache,
 	}
 }
 
@@ -83,17 +88,47 @@ func (s *userService) AuthenticateUser(ctx context.Context, email, password stri
 }
 
 func (s *userService) GetUserProfile(ctx context.Context, id string) (domain.User, error) {
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("user:profile:%s", id)
+	var cachedUser domain.User
+
+	err := s.cache.Get(ctx, cacheKey, &cachedUser)
+	if err == nil {
+		log.Printf("Cache hit for user profile ID: %s", id)
+		return cachedUser, nil
+	}
+
+	if err != cache.ErrCacheMiss {
+		log.Printf("Cache error for user profile ID %s: %v", id, err)
+	}
+
+	// If not in cache, get from database
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
 		return domain.User{}, err
 	}
 
-	// Clear password before returning
+	// Clear password before caching
 	user.Password = ""
+
+	// Store in cache with 15-minute TTL
+	if err := s.cache.Set(ctx, cacheKey, user, 15*time.Minute); err != nil {
+		log.Printf("Failed to cache user profile ID %s: %v", id, err)
+	}
 
 	return user, nil
 }
 
 func (s *userService) UpdateUser(ctx context.Context, user domain.User) error {
-	return s.userRepo.Update(ctx, user)
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return err
+	}
+
+	// Invalidate cache
+	cacheKey := fmt.Sprintf("user:profile:%s", user.ID)
+	if err := s.cache.Delete(ctx, cacheKey); err != nil {
+		log.Printf("Failed to invalidate cache for user profile ID %s: %v", user.ID, err)
+	}
+
+	return nil
 }
